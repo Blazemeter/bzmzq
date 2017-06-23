@@ -13,6 +13,7 @@ from job import Job
 from queue import Queue
 from states import JobStates
 
+import sys
 
 class WorkListener(object):
     def __init__(self, queue):
@@ -73,9 +74,12 @@ if __name__ == "__main__":
     parser.add_argument('-z', '--zkservers', type=str, required=True,
                         help='Zookeeper servers. "127.0.0.1:2181,127.0.0.1:2182"')
     parser.add_argument('-q', '--queue', type=str, required=True, help='Queue name')
+    parser.add_argument('-m', '--module-path', type=str,required=False,nargs='*', help='Module paths')
 
     args = parser.parse_args()
+    for path in args.module_path:
+        sys.path.insert(0, path)
     q = Queue(args.zkservers, args.queue)
 
-    s = WorkListener(q)
-    s.run()
+    w = WorkListener(q)
+    w.run()
