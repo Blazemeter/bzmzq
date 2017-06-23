@@ -82,7 +82,7 @@ class Job(object):
 
     def delete(self):
         job_path = self._queue.path_factory.job.id(self.id)
-        self.__reset_state()
+        self._reset_state()
         self._queue._kz_ses.delete(str(job_path), recursive=True)
 
     def __getattr__(self, prop):

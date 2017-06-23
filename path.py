@@ -133,7 +133,7 @@ class PathFactory(object):
 
     @cached_prop
     def scheduled_job(self):
-        return _ScheduledJobPath(self)
+        return _ScheduledJobPath(self, self.queue)
 
     @cached_prop
     def scheduled_job_state(self):
