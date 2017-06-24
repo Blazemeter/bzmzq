@@ -75,7 +75,10 @@ class WorkListener(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BzmZQ Worker')
     parser.add_argument(
-        '-z', '--zkservers', type=str, required=True,
+        '-z',
+        '--zkservers',
+        type=str,
+        required=True,
         help='Zookeeper servers. "127.0.0.1:2181,127.0.0.1:2182"')
     parser.add_argument(
         '-q',
@@ -92,7 +95,7 @@ if __name__ == "__main__":
         help='Module paths')
 
     args = parser.parse_args()
-    for path in args.module_path:
+    for path in set(args.module_path):
         sys.path.insert(0, path)
     q = Queue(args.zkservers, args.queue)
 
