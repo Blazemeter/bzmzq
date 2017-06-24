@@ -31,6 +31,7 @@ class ZkPath(list):
 def get_logger(name):
     import sys
     import logging
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        stream=sys.stdout, level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     return logging.getLogger(name)

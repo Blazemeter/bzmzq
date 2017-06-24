@@ -21,7 +21,8 @@ class Queue(object):
         self._kz_ses = KazooClient(zk_servers)
         self._kz_ses.start()
 
-        self._kz_queue = self._kz_ses.LockingQueue(str(self.path_factory.queue.kz_queue()))
+        self._kz_queue = self._kz_ses.LockingQueue(
+            str(self.path_factory.queue.kz_queue()))
 
         self._tlock = TLock()
         self._rlock_cache = WeakValueDictionary()  # {<rlock_name>: RLock}
@@ -50,7 +51,7 @@ class Queue(object):
 
     def get_lock(self, lock_name=None):
         with self._tlock:
-            lock_name = self.ZK_QUEUE_LOCK_NAME if lock_name is None else lock_name
+            lock_name = self.ZK_QUEUE_LOCK_NAME if lock_name else lock_name
             cached_lock = self._rlock_cache.get(lock_name)
 
             if cached_lock:
@@ -75,7 +76,8 @@ class Queue(object):
                 raise ValueError("Unknown job state")
             path = str(self.path_factory.job_state.id(state))
 
-        return [Job(self, job_id) for job_id in self._kz_ses.get_children(path)]
+        return [Job(self, job_id)
+                for job_id in self._kz_ses.get_children(path)]
 
     def get_scheduled_jobs(self, state=None):
         if state is None:
@@ -84,4 +86,5 @@ class Queue(object):
             if state not in ScheduledJobStates().values():
                 raise ValueError("Unknown scheduled job state")
             path = str(self.path_factory.scheduled_job_state.id(state))
-        return [ScheduledJob(self, scheduled_job_id) for scheduled_job_id in self._kz_ses.get_children(path)]
+        return [ScheduledJob(self, scheduled_job_id)
+                for scheduled_job_id in self._kz_ses.get_children(path)]

@@ -7,10 +7,19 @@ from states import JobStates
 
 
 class Job(object):
-    STATIC_PROPS = ['created', 'started', 'finished', 'name', 'module', 'module_kwargs', 'description', 'result',
-                    'worker']
+    # Write once props
+    WO_STATIC_PROPS = [
+        'created',
+        'started',
+        'finished',
+        'name',
+        'module',
+        'module_kwargs',
+        'description',
+        'result',
+        'worker']
     DYNAMIC_PROPS = ['state']
-    ALLOWED_PROPS = STATIC_PROPS + DYNAMIC_PROPS
+    ALLOWED_PROPS = WO_STATIC_PROPS + DYNAMIC_PROPS
 
     DEFAULT_PRIORITY = 100
 
@@ -20,7 +29,8 @@ class Job(object):
         self._priority = priority
 
     @classmethod
-    def create(cls, queue, name, module, module_kwargs=None, priority=DEFAULT_PRIORITY):
+    def create(cls, queue, name, module, module_kwargs=None,
+               priority=DEFAULT_PRIORITY):
         job_id = str(uuid4())
         job_path = queue.path_factory.job.id(job_id)
         queue._kz_ses.ensure_path(str(job_path))
@@ -28,7 +38,7 @@ class Job(object):
         if module_kwargs is not None and not isinstance(module_kwargs, dict):
             raise ValueError("module_kwargs can be a dict or None")
 
-        for prop in cls.STATIC_PROPS:
+        for prop in cls.WO_STATIC_PROPS:
             prop_path = queue.path_factory.job.prop(job_id, prop)
             queue._kz_ses.ensure_path(str(prop_path))
 
@@ -47,7 +57,8 @@ class Job(object):
 
     def _set_prop(self, prop, val):
         if prop not in self.ALLOWED_PROPS:
-            raise ValueError("Prop [{}] is not in allowed prop list".format(prop))
+            raise ValueError(
+                "Prop [{}] is not in allowed prop list".format(prop))
 
         prop_path = self._queue.path_factory.job.prop(self.id, prop)
         if self._get_prop(prop):

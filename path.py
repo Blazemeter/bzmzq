@@ -32,12 +32,14 @@ class _PathBase(object):
 
     def __getattribute__(self, item):
         attr = super(_PathBase, self).__getattribute__(item)
-        if not callable(attr) or item.startswith('_') or hasattr(attr, '__no_traversal__'):
+        if not callable(attr) or item.startswith(
+                '_') or hasattr(attr, '__no_traversal__'):
             return attr
 
         def _traversal_wrapper(*args, **kwargs):
             my_root = self._absoluteattr(self.ROOT_METHOD)()
-            parent_root = [] if not self._parent else getattr(self._parent, self.ROOT_METHOD)()
+            parent_root = [] if not self._parent else getattr(
+                self._parent, self.ROOT_METHOD)()
             final_path = parent_root + my_root
 
             # If we are getting other method than ROOT_METHOD, get it too.
@@ -50,7 +52,8 @@ class _PathBase(object):
 
 class _QueuePath(_PathBase):
     def root(self):
-        return [self._path_factory.queue_instance.ZK_TREE_ROOT, self._path_factory.queue_instance.queue_name]
+        return [self._path_factory.queue_instance.ZK_TREE_ROOT,
+                self._path_factory.queue_instance.queue_name]
 
     def kz_queue(self):
         return ['kz_queue']
@@ -112,7 +115,8 @@ class _ScheduledJobPath(_PathBase):
 
     @no_tree_traversal
     def state(self, scheduled_job_id, state_id):
-        return self._path_factory.scheduled_job_state.id(state_id) + [scheduled_job_id]
+        return self._path_factory.scheduled_job_state.id(
+            state_id) + [scheduled_job_id]
 
 
 class PathFactory(object):
@@ -155,7 +159,9 @@ class PathFactory(object):
         for attr_name in dir(self):
             tree_item = getattr(self, attr_name)
             if self.is_tree_item(tree_item):
-                tree_item_root = [getattr(tree_item, root_fn)() for root_fn in dir(tree_item) if
-                                  root_fn.startswith(_PathBase.ROOT_METHOD)]
+                tree_item_root = [getattr(tree_item, root_fn)()
+                                  for root_fn in dir(tree_item)
+                                  if root_fn.startswith(
+                                      _PathBase.ROOT_METHOD)]
                 paths += tree_item_root
         return paths

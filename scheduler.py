@@ -19,7 +19,7 @@ class Scheduler(object):
         self._logger = get_logger(self.__class__.__name__)
         self._timers_lock = Lock()
         self._timers = {}  # {<scheduled_job_id> : Timer}
-        self._more_events = Event()  # Were there more events while running timer update
+        self._more_events = Event()
 
         self._timer_update_thread = None
 
@@ -27,14 +27,18 @@ class Scheduler(object):
         if self._timer_update_thread and self._timer_update_thread.is_alive():
             self._more_events.set()
 
-        self._timer_update_thread = Timer(0, self._thread_scan_and_update_timers)
+        self._timer_update_thread = Timer(
+            0, self._thread_scan_and_update_timers)
         self._timer_update_thread.daemon = True
         self._timer_update_thread.start()
 
     def _register_handlers(self):
         enabled_scheduled_jobs_path = str(
-            self._queue.path_factory.scheduled_job_state.id(ScheduledJobStates.STATE_ENABLED))
-        self._queue._kz_ses.ChildrenWatch(enabled_scheduled_jobs_path, self.__enabled_scheduled_job_update_handler)
+            self._queue.path_factory.scheduled_job_state.id(
+                ScheduledJobStates.STATE_ENABLED))
+        self._queue._kz_ses.ChildrenWatch(
+            enabled_scheduled_jobs_path,
+            self.__enabled_scheduled_job_update_handler)
 
     def _cancel_all_timers(self):
         with self._timers_lock:
@@ -48,8 +52,12 @@ class Scheduler(object):
             if current_timer:
                 current_timer.cancel()
 
-            delta = 0 if not scheduled_job.next_run else scheduled_job.next_run - time.time()
-            new_timer = Timer(delta, self._thread_push_job, args=(scheduled_job.id,))
+            delta = 0 if not scheduled_job.next_run \
+                else scheduled_job.next_run - time.time()
+
+            new_timer = Timer(
+                delta, self._thread_push_job, args=(
+                    scheduled_job.id,))
             self._timers[scheduled_job] = new_timer
             new_timer.start()
 
@@ -57,7 +65,8 @@ class Scheduler(object):
         self._more_events.clear()
         try:
             self._cancel_all_timers()
-            scheduled_jobs = self._queue.get_scheduled_jobs(state=ScheduledJobStates.STATE_ENABLED)
+            scheduled_jobs = self._queue.get_scheduled_jobs(
+                state=ScheduledJobStates.STATE_ENABLED)
             for scheduled_job in scheduled_jobs:
                 try:
                     self._set_scheduled_job_timer(scheduled_job)
@@ -78,15 +87,22 @@ class Scheduler(object):
                 pass
         return True
 
-    # TODO: Move this to a separate thread to avoid locking and benefit from reentrant lock
+    # TODO: Move this to a separate thread to avoid locking and benefit from
+    # reentrant lock
     def _thread_push_job(self, scheduled_job_id):
         try:
             scheduled_job = ScheduledJob(self._queue, scheduled_job_id)
-            self._logger.info("Pushing job scheduled job {}".format(scheduled_job.id))
+            self._logger.info(
+                "Pushing job scheduled job {}".format(
+                    scheduled_job.id))
 
             if self._can_push_job(scheduled_job):
-                job = Job.create(self._queue, scheduled_job.name, scheduled_job.module, scheduled_job.module_kwargs,
-                                 scheduled_job.priority)
+                job = Job.create(
+                    self._queue,
+                    scheduled_job.name,
+                    scheduled_job.module,
+                    scheduled_job.module_kwargs,
+                    scheduled_job.priority)
                 scheduled_job.last_job_id = job.id
 
             new_next_run = time.time() + scheduled_job.interval_min * 60
@@ -100,7 +116,7 @@ class Scheduler(object):
         try:
             with self._queue.get_lock(self.ZK_SCHEDULER_LOCK_NAME):
                 self._register_handlers()
-                while 1:
+                while True:
                     time.sleep(0.5)
         except KeyboardInterrupt:
             self._cancel_all_timers()
@@ -109,9 +125,15 @@ class Scheduler(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BzmZQ Scheduler')
-    parser.add_argument('-z', '--zkservers', type=str, required=True,
-                        help='Zookeeper servers. "127.0.0.1:2181,127.0.0.1:2182"')
-    parser.add_argument('-q', '--queue', type=str, required=True, help='Queue name')
+    parser.add_argument(
+        '-z', '--zkservers', type=str, required=True,
+        help='Zookeeper servers. "127.0.0.1:2181,127.0.0.1:2182"')
+    parser.add_argument(
+        '-q',
+        '--queue',
+        type=str,
+        required=True,
+        help='Queue name')
 
     args = parser.parse_args()
     q = Queue(args.zkservers, args.queue)

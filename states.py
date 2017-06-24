@@ -1,8 +1,9 @@
 class _BaseState(object):
     @classmethod
     def __new__(cls, *args, **kwargs):
-        return {state_name: state_id for state_name, state_id in cls.__dict__.iteritems() if
-                state_name.startswith("STATE")}
+        return {state_name: state_id
+                for state_name, state_id in cls.__dict__.iteritems()
+                if state_name.startswith("STATE")}
 
 
 class JobStates(_BaseState):

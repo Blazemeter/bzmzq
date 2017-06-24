@@ -5,11 +5,21 @@ from states import JobStates, ScheduledJobStates
 
 
 class ScheduledJob(object):
-    STATIC_PROPS = ['id', 'name', 'module', 'module_kwargs', 'interval_min', 'concurrent', 'next_run', 'last_job_id',
-                    'priority']
-    OVERRIDABLE_STATIC_PROPS = ['next_run', 'last_job_id']
+    # Write once props
+    WO_STATIC_PROPS = [
+        'id',
+        'name',
+        'module',
+        'module_kwargs',
+        'interval_min',
+        'concurrent',
+        'next_run',
+        'last_job_id',
+        'priority']
+    # Write always props
+    WA_STATIC_PROPS = ['next_run', 'last_job_id']
     DYNAMIC_PROPS = ['state']
-    ALLOWED_PROPS = STATIC_PROPS + DYNAMIC_PROPS
+    ALLOWED_PROPS = WO_STATIC_PROPS + DYNAMIC_PROPS
 
     DEFAULT_PRIORITY = 100
     DEFAULT_INTERVAL = 1
@@ -19,13 +29,17 @@ class ScheduledJob(object):
         self._scheduled_job_id = scheduled_job_id
 
     @classmethod
-    def create(cls, queue, scheduled_job_id, name, module, module_kwargs=None, priority=DEFAULT_PRIORITY,
-               interval_min=DEFAULT_INTERVAL, concurrent=True, override=False):
+    def create(
+            cls, queue, scheduled_job_id, name, module, module_kwargs=None,
+            priority=DEFAULT_PRIORITY, interval_min=DEFAULT_INTERVAL,
+            concurrent=True, override=False):
 
-        scheduled_job_path = queue.path_factory.scheduled_job.id(scheduled_job_id)
+        scheduled_job_path = queue.path_factory.scheduled_job.id(
+            scheduled_job_id)
         if queue._kz_ses.exists(str(scheduled_job_path)):
             if not override:
-                raise RuntimeError("Scheduled job already exists and override set to false")
+                raise RuntimeError(
+                    "Scheduled job already exists and override set to false")
             cls(queue, scheduled_job_id).delete()
 
         queue._kz_ses.ensure_path(str(scheduled_job_path))
@@ -33,20 +47,21 @@ class ScheduledJob(object):
         if module_kwargs is not None and not isinstance(module_kwargs, dict):
             raise ValueError("module_kwargs can be a dict or None")
 
-        for prop in cls.STATIC_PROPS:
-            prop_path = queue.path_factory.scheduled_job.prop(scheduled_job_id, prop)
+        for prop in cls.WO_STATIC_PROPS:
+            prop_path = queue.path_factory.scheduled_job.prop(
+                scheduled_job_id, prop)
             queue._kz_ses.ensure_path(str(prop_path))
 
-        scheduled_job_instance = cls(queue, scheduled_job_id)
-        scheduled_job_instance.name = name
-        scheduled_job_instance.module = module
-        scheduled_job_instance.module_kwargs = module_kwargs if module_kwargs else {}
-        scheduled_job_instance.interval_min = interval_min
-        scheduled_job_instance.concurrent = concurrent
-        scheduled_job_instance.priority = priority
-        scheduled_job_instance.state = ScheduledJobStates.STATE_ENABLED
+        sj = cls(queue, scheduled_job_id)
+        sj.name = name
+        sj.module = module
+        sj.module_kwargs = module_kwargs if module_kwargs else {}
+        sj.interval_min = interval_min
+        sj.concurrent = concurrent
+        sj.priority = priority
+        sj.state = ScheduledJobStates.STATE_ENABLED
 
-        return scheduled_job_instance
+        return sj
 
     @cached_prop
     def id(self):
@@ -54,7 +69,8 @@ class ScheduledJob(object):
 
     def _set_prop(self, prop, val):
         if prop not in self.ALLOWED_PROPS:
-            raise ValueError("Prop [{}] is not in allowed prop list".format(prop))
+            raise ValueError(
+                "Prop [{}] is not in allowed prop list".format(prop))
 
         prop_path = self._queue.path_factory.scheduled_job.prop(self.id, prop)
         self._queue._kz_ses.set(str(prop_path), json.dumps(val))
@@ -66,19 +82,22 @@ class ScheduledJob(object):
 
     def _reset_state(self):
         for state_name, state_id in ScheduledJobStates().iteritems():
-            state_path = self._queue.path_factory.scheduled_job.state(self.id, state_id)
+            state_path = self._queue.path_factory.scheduled_job.state(
+                self.id, state_id)
             self._queue._kz_ses.delete(str(state_path), recursive=True)
 
     def _set_state(self, state_id):
         if state_id not in ScheduledJobStates().values():
             raise ValueError("State [{}] is unknown".format(state_id))
         self._reset_state()
-        state_path = self._queue.path_factory.scheduled_job.state(self.id, state_id)
+        state_path = self._queue.path_factory.scheduled_job.state(
+            self.id, state_id)
         self._queue._kz_ses.ensure_path(str(state_path))
 
     def _get_state(self):
         for state_name, state_id in JobStates().iteritems():
-            state_path = self._queue.path_factory.scheduled_job.state(self.id, state_id)
+            state_path = self._queue.path_factory.scheduled_job.state(
+                self.id, state_id)
             if self._queue._kz_ses.exists(str(state_path)):
                 return state_name, state_id
         raise RuntimeError("Scheduled Job state could not be determined")
@@ -101,7 +120,7 @@ class ScheduledJob(object):
             self._set_state(value)
         elif name not in self.ALLOWED_PROPS:
             return super(ScheduledJob, self).__setattr__(name, value)
-        elif name not in self.OVERRIDABLE_STATIC_PROPS and self._get_prop(name):
+        elif name not in self.WA_STATIC_PROPS and self._get_prop(name):
             raise RuntimeError("You can not change props after they were set")
         else:
             self._set_prop(name, value)
