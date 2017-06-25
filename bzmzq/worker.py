@@ -77,8 +77,7 @@ class WorkListener(object):
                 if run_once:
                     exit(0)
 
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='BzmZQ Worker')
     parser.add_argument(
         '-r',
@@ -113,3 +112,6 @@ if __name__ == "__main__":
 
     w = WorkListener(q)
     w.run(args.run_once)
+
+if __name__ == "__main__":
+   main()

@@ -141,8 +141,7 @@ class Scheduler(object):
             exit(1)
 
 
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='BzmZQ Scheduler')
     parser.add_argument(
         '-z', '--zkservers',
@@ -160,3 +159,6 @@ if __name__ == "__main__":
     q = Queue(args.zkservers, args.queue)
     s = Scheduler(q)
     s.run()
+
+if __name__ == "__main__":
+    main()
