@@ -9,6 +9,7 @@ setup(name='bzmzq',
       license='MIT',
       packages=['bzmzq'],
       include_package_data=True,
+      zip_safe=False,
       install_requires=[
           'kazoo==2.4.0',
       ],
