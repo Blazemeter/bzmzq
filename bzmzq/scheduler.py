@@ -13,6 +13,7 @@ from states import JobStates, ScheduledJobStates
 
 class Scheduler(object):
     ZK_SCHEDULER_LOCK_NAME = 'scheduler-lock'
+    JOB_CLEANER_INTERVAL = 1
 
     def __init__(self, queue):
         self._queue = queue
@@ -87,8 +88,6 @@ class Scheduler(object):
                 pass
         return True
 
-    # TODO: Move this to a separate thread to avoid locking and benefit from
-    # reentrant lock
     def _thread_push_job(self, scheduled_job_id):
         try:
             scheduled_job = ScheduledJob(self._queue, scheduled_job_id)
@@ -111,10 +110,29 @@ class Scheduler(object):
         except NoNodeError:
             pass
 
+    def _thread_clean_stale_job_loop(self):
+        try:
+            self._logger.info("Job cleaner is running...")
+            for job in self._queue.get_jobs(state=JobStates.STATE_RUNNING):
+                worker_path = self._queue.path_factory.worker.id(job.worker)
+                print self._queue._kz_ses.exists(str(worker_path))
+                if not self._queue._kz_ses.exists(str(worker_path)):
+                    self._logger.warn("Cleaning stale job [{}]".format(job.id))
+                    job.state = JobStates.STATE_FAILED
+        except NoNodeError:
+            pass
+        finally:
+            self._logger.info("Job cleaner finished!")
+            t = Timer(self.JOB_CLEANER_INTERVAL*60, self._thread_clean_stale_job_loop)
+            t.daemon = True
+            t.start()
+
     def run(self):
-        self._logger.info("Scheduler is running")
+        self._logger.info("Scheduler acquiring lock...")
         try:
             with self._queue.get_lock(self.ZK_SCHEDULER_LOCK_NAME):
+                self._logger.info("Scheduler is running!")
+                self._thread_clean_stale_job_loop()
                 self._register_handlers()
                 while True:
                     time.sleep(0.5)
@@ -123,10 +141,13 @@ class Scheduler(object):
             exit(1)
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BzmZQ Scheduler')
     parser.add_argument(
-        '-z', '--zkservers', type=str, required=True,
+        '-z', '--zkservers',
+        type=str,
+        required=True,
         help='Zookeeper servers. "127.0.0.1:2181,127.0.0.1:2182"')
     parser.add_argument(
         '-q',

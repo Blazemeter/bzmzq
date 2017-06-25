@@ -79,10 +79,10 @@ class Job(object):
         if state_id not in JobStates().values():
             raise ValueError("State [{}] is unknown".format(state_id))
         self._reset_state()
-        state_path = self._queue.path_factory.job.state(self.id, state_id)
-        self._queue._kz_ses.ensure_path(str(state_path))
         if state_id == JobStates.STATE_PENDING:
             self._queue._kz_queue.put(self._job_id, self._priority)
+        state_path = self._queue.path_factory.job.state(self.id, state_id)
+        self._queue._kz_ses.ensure_path(str(state_path))
 
     def _get_state(self):
         for state_name, state_id in JobStates().iteritems():

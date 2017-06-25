@@ -53,14 +53,17 @@ class WorkListener(object):
             found_cls = self._import_class(job.module)
             inst = found_cls()
             inst.setup(self._queue, **job.module_kwargs)
-            job.result = inst.run()
+            try:
+                job.result = inst.run()
+            finally:
+                inst.teardown()
         except BaseException:
             job.result = traceback.format_exc()
             job.state = JobStates.STATE_FAILED
         else:
             job.state = JobStates.STATE_SUCCESS
 
-    def run(self):
+    def run(self, run_once=False):
         self._register_worker()
         while True:
             try:
@@ -69,11 +72,20 @@ class WorkListener(object):
                 self._logger.info("Handling job {}".format(job_id))
                 self._handle_job(job_id)
             except BaseException:
-                print traceback.format_exc()
+                self._logger.error(traceback.format_exc())
+            finally:
+                if run_once:
+                    exit(0)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BzmZQ Worker')
+    parser.add_argument(
+        '-r',
+        '--run-once',
+        type=bool,
+        default=False,
+        help='Should worker exit after one job.')
     parser.add_argument(
         '-z',
         '--zkservers',
@@ -100,4 +112,4 @@ if __name__ == "__main__":
     q = Queue(args.zkservers, args.queue)
 
     w = WorkListener(q)
-    w.run()
+    w.run(args.run_once)
