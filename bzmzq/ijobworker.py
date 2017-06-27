@@ -5,7 +5,7 @@ class IJobWorker(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def setup(self, queue, **kwargs): pass
+    def __init__(self, queue, job, **kwargs): pass
 
     @abstractmethod
     def run(self): pass

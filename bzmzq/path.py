@@ -162,6 +162,6 @@ class PathFactory(object):
                 tree_item_root = [getattr(tree_item, root_fn)()
                                   for root_fn in dir(tree_item)
                                   if root_fn.startswith(
-                                      _PathBase.ROOT_METHOD)]
+                        _PathBase.ROOT_METHOD)]
                 paths += tree_item_root
         return paths

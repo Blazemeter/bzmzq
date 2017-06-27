@@ -2,9 +2,11 @@ import argparse
 import importlib
 import inspect
 import platform
+import sys
 import traceback
 
 import os
+from kazoo.client import KazooState
 from kazoo.exceptions import NodeExistsError
 
 from helpers import cached_prop, get_logger
@@ -12,8 +14,6 @@ from ijobworker import IJobWorker
 from job import Job
 from queue import Queue
 from states import JobStates
-
-import sys
 
 
 class WorkListener(object):
@@ -26,22 +26,28 @@ class WorkListener(object):
         return '{0}-{1}-{2}'.format(self.__class__.__name__,
                                     platform.node(), os.getpid())
 
+    def __state_handler(self, state):
+        if state in [KazooState.LOST, KazooState.SUSPENDED]:
+            self._logger.critical("Lost connection to ZooKeeper, exiting...")
+            os._exit(1)
+
     def _register_worker(self):
         self._logger.info("Registering worker")
         my_worker_path = str(self._queue.path_factory.worker.id(self.id))
 
         try:
-            self._queue._kz_ses.create(path=my_worker_path, ephemeral=True)
+            self._queue.kz_ses.create(path=my_worker_path, ephemeral=True)
         except NodeExistsError:
             pass
 
     def _import_class(self, module_name):
         imported_module = importlib.import_module(module_name)
-
-        for cls_name, cls in inspect.getmembers(
+        reload(imported_module)
+        for cls_name, cls_obj in inspect.getmembers(
                 imported_module, inspect.isclass):
-            if cls != IJobWorker and issubclass(cls, IJobWorker):
-                return cls
+            if cls_obj.__name__ != IJobWorker.__name__ and IJobWorker.__name__ in [base_cls.__name__ for base_cls in
+                                                                                   cls_obj.__bases__]:
+                return cls_obj
         raise ImportError("Could not find a class implementing IJobWorker")
 
     def _handle_job(self, job_id):
@@ -51,8 +57,7 @@ class WorkListener(object):
 
         try:
             found_cls = self._import_class(job.module)
-            inst = found_cls()
-            inst.setup(self._queue, **job.module_kwargs)
+            inst = found_cls(self._queue, job, **job.module_kwargs)
             try:
                 job.result = inst.run()
             finally:
@@ -64,6 +69,7 @@ class WorkListener(object):
             job.state = JobStates.STATE_SUCCESS
 
     def run(self, run_once=False):
+        self._queue.kz_ses.add_listener(self.__state_handler)
         self._register_worker()
         while True:
             try:
@@ -76,6 +82,7 @@ class WorkListener(object):
             finally:
                 if run_once:
                     exit(0)
+
 
 def main():
     parser = argparse.ArgumentParser(description='BzmZQ Worker')
@@ -113,5 +120,6 @@ def main():
     w = WorkListener(q)
     w.run(args.run_once)
 
+
 if __name__ == "__main__":
-   main()
+    main()

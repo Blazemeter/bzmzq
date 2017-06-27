@@ -18,10 +18,10 @@ class Queue(object):
 
     def __init__(self, zk_servers, queue_name):
         self._queue_name = queue_name
-        self._kz_ses = KazooClient(zk_servers)
-        self._kz_ses.start()
+        self.kz_ses = KazooClient(zk_servers)
+        self.kz_ses.start()
 
-        self._kz_queue = self._kz_ses.LockingQueue(
+        self._kz_queue = self.kz_ses.LockingQueue(
             str(self.path_factory.queue.kz_queue()))
 
         self._tlock = TLock()
@@ -39,15 +39,15 @@ class Queue(object):
 
     def _make_paths(self):
         for root_path in self.path_factory.get_path_roots():
-            self._kz_ses.ensure_path(str(root_path))
+            self.kz_ses.ensure_path(str(root_path))
 
         for state_id in JobStates().values():
             state_path = self.path_factory.job_state.id(state_id)
-            self._kz_ses.ensure_path(str(state_path))
+            self.kz_ses.ensure_path(str(state_path))
 
         for state_id in ScheduledJobStates().values():
             state_path = self.path_factory.scheduled_job_state.id(state_id)
-            self._kz_ses.ensure_path(str(state_path))
+            self.kz_ses.ensure_path(str(state_path))
 
     def get_lock(self, lock_name=None):
         with self._tlock:
@@ -58,7 +58,7 @@ class Queue(object):
                 return cached_lock
 
             lock_path = self.path_factory.lock.name(lock_name)
-            new_lock = RLock(self._kz_ses, str(lock_path))
+            new_lock = RLock(self.kz_ses, str(lock_path))
             self._rlock_cache[lock_name] = new_lock
             return new_lock
 
@@ -77,7 +77,7 @@ class Queue(object):
             path = str(self.path_factory.job_state.id(state))
 
         return [Job(self, job_id)
-                for job_id in self._kz_ses.get_children(path)]
+                for job_id in self.kz_ses.get_children(path)]
 
     def get_scheduled_jobs(self, state=None):
         if state is None:
@@ -87,4 +87,4 @@ class Queue(object):
                 raise ValueError("Unknown scheduled job state")
             path = str(self.path_factory.scheduled_job_state.id(state))
         return [ScheduledJob(self, scheduled_job_id)
-                for scheduled_job_id in self._kz_ses.get_children(path)]
+                for scheduled_job_id in self.kz_ses.get_children(path)]

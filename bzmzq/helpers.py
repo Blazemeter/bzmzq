@@ -31,7 +31,15 @@ class ZkPath(list):
 def get_logger(name):
     import sys
     import logging
-    logging.basicConfig(
-        stream=sys.stdout, level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    return logging.getLogger(name)
+    import os
+    logger = logging.getLogger(name)
+    lh = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    lh.setFormatter(formatter)
+    logger.addHandler(lh)
+    logger.setLevel(logging.INFO)
+
+    if 'NO_HC_LOGS' in os.environ:
+        logger.disabled = True
+
+    return logger

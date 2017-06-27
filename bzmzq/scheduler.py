@@ -2,6 +2,8 @@ import argparse
 import time
 from threading import Event, Lock, Timer
 
+import os
+from kazoo.client import KazooState
 from kazoo.exceptions import NoNodeError
 
 from helpers import get_logger
@@ -24,6 +26,11 @@ class Scheduler(object):
 
         self._timer_update_thread = None
 
+    def __state_handler(self, state):
+        if state in [KazooState.LOST, KazooState.SUSPENDED]:
+            self._logger.critical("Lost connection to ZooKeeper, exiting...")
+            os._exit(1)
+
     def __enabled_scheduled_job_update_handler(self, _):
         if self._timer_update_thread and self._timer_update_thread.is_alive():
             self._more_events.set()
@@ -37,7 +44,7 @@ class Scheduler(object):
         enabled_scheduled_jobs_path = str(
             self._queue.path_factory.scheduled_job_state.id(
                 ScheduledJobStates.STATE_ENABLED))
-        self._queue._kz_ses.ChildrenWatch(
+        self._queue.kz_ses.ChildrenWatch(
             enabled_scheduled_jobs_path,
             self.__enabled_scheduled_job_update_handler)
 
@@ -115,19 +122,23 @@ class Scheduler(object):
             self._logger.info("Job cleaner is running...")
             for job in self._queue.get_jobs(state=JobStates.STATE_RUNNING):
                 worker_path = self._queue.path_factory.worker.id(job.worker)
-                print self._queue._kz_ses.exists(str(worker_path))
-                if not self._queue._kz_ses.exists(str(worker_path)):
+                if not self._queue.kz_ses.exists(str(worker_path)):
                     self._logger.warn("Cleaning stale job [{}]".format(job.id))
                     job.state = JobStates.STATE_FAILED
         except NoNodeError:
             pass
         finally:
             self._logger.info("Job cleaner finished!")
-            t = Timer(self.JOB_CLEANER_INTERVAL*60, self._thread_clean_stale_job_loop)
+            t = Timer(self.JOB_CLEANER_INTERVAL * 60, self._thread_clean_stale_job_loop)
             t.daemon = True
             t.start()
 
+    def _exit(self, code):
+        self._cancel_all_timers()
+        exit(code)
+
     def run(self):
+        self._queue.kz_ses.add_listener(self.__state_handler)
         self._logger.info("Scheduler acquiring lock...")
         try:
             with self._queue.get_lock(self.ZK_SCHEDULER_LOCK_NAME):
@@ -137,8 +148,7 @@ class Scheduler(object):
                 while True:
                     time.sleep(0.5)
         except KeyboardInterrupt:
-            self._cancel_all_timers()
-            exit(1)
+            self._exit(1)
 
 
 def main():
@@ -159,6 +169,7 @@ def main():
     q = Queue(args.zkservers, args.queue)
     s = Scheduler(q)
     s.run()
+
 
 if __name__ == "__main__":
     main()
