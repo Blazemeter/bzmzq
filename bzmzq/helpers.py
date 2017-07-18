@@ -39,7 +39,7 @@ def get_logger(name):
     logger.addHandler(lh)
     logger.setLevel(logging.INFO)
 
-    if 'NO_HC_LOGS' in os.environ:
+    if 'NO_BZMZQ_LOGS' in os.environ:
         logger.disabled = True
 
     return logger

@@ -11,7 +11,6 @@ from scheduled_job import ScheduledJob
 # from scheduler import Scheduler
 from states import JobStates, ScheduledJobStates
 
-
 class Queue(object):
     ZK_TREE_ROOT = 'bzmzq'
     ZK_QUEUE_LOCK_NAME = 'main-lock'
@@ -20,6 +19,8 @@ class Queue(object):
         self._queue_name = queue_name
         self.kz_ses = KazooClient(zk_servers)
         self.kz_ses.start()
+
+        self.servers = zk_servers
 
         self._kz_queue = self.kz_ses.LockingQueue(
             str(self.path_factory.queue.kz_queue()))

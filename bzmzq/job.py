@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from helpers import cached_prop
 from states import JobStates
-
+import custom_exceptions as exceptions
 
 class Job(object):
     # Write once props
@@ -93,6 +93,15 @@ class Job(object):
             if self._queue.kz_ses.exists(str(state_path)):
                 return state_name, state_id
         raise RuntimeError("Job state could not be determined")
+
+    def wait(self, timeout_sec=60):
+        WATCH_INTERVAL_SEC = 1
+
+        expiry = time.time() + timeout_sec
+        while self.state not in [JobStates.STATE_FAILED, JobStates.STATE_SUCCESS]:
+            if time.time() > expiry:
+                raise exceptions.TimeoutError("Job wait timed out.")
+            time.sleep(WATCH_INTERVAL_SEC)
 
     def delete(self):
         job_path = self._queue.path_factory.job.id(self.id)
