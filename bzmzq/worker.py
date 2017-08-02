@@ -14,6 +14,7 @@ from ijobworker import IJobWorker
 from job import Job
 from queue import Queue
 from states import JobStates
+import time
 
 
 class WorkListener(object):
@@ -54,6 +55,7 @@ class WorkListener(object):
         job = Job(self._queue, job_id)
         job.worker = self.id
         job.state = JobStates.STATE_RUNNING
+        job.started = time.time()
 
         try:
             found_cls = self._import_class(job.module)
@@ -63,10 +65,12 @@ class WorkListener(object):
             finally:
                 inst.teardown()
         except BaseException:
-            job.result = traceback.format_exc()
+            job.error = traceback.format_exc()
             job.state = JobStates.STATE_FAILED
         else:
             job.state = JobStates.STATE_SUCCESS
+        finally:
+            job.ended = time.time()
 
     def run(self, run_once=False):
         self._queue.kz_ses.add_listener(self.__state_handler)
@@ -77,6 +81,7 @@ class WorkListener(object):
                 self._queue._kz_queue.consume()
                 self._logger.info("Handling job {}".format(job_id))
                 self._handle_job(job_id)
+                self._logger.info("Finished job {}".format(job_id))
             except BaseException:
                 self._logger.error(traceback.format_exc())
             finally:

@@ -11,14 +11,15 @@ class Job(object):
     WO_STATIC_PROPS = [
         'created',
         'started',
-        'finished',
+        'ended',
         'name',
         'module',
         'module_kwargs',
         'description',
         'result',
+        'error',
         'worker',
-        'parent_job'
+        'parent_job_id'
     ]
     DYNAMIC_PROPS = ['state']
     ALLOWED_PROPS = WO_STATIC_PROPS + DYNAMIC_PROPS
@@ -31,11 +32,12 @@ class Job(object):
         self._priority = priority
 
     @classmethod
-    def create(cls, queue, name, module, module_kwargs=None, parent_job=None,
+    def create(cls, queue, module, name=None, module_kwargs=None, parent_job_id=None,
                priority=DEFAULT_PRIORITY):
         job_id = str(uuid4())
         job_path = queue.path_factory.job.id(job_id)
         queue.kz_ses.ensure_path(str(job_path))
+
 
         if module_kwargs is not None and not isinstance(module_kwargs, dict):
             raise ValueError("module_kwargs can be a dict or None")
@@ -49,7 +51,7 @@ class Job(object):
         job_instance.name = name
         job_instance.module = module
         job_instance.module_kwargs = module_kwargs if module_kwargs else {}
-        job_instance.parent_job = parent_job
+        job_instance.parent_job_id = parent_job_id
         job_instance.state = JobStates.STATE_PENDING
 
         return job_instance
@@ -92,16 +94,24 @@ class Job(object):
             state_path = self._queue.path_factory.job.state(self.id, state_id)
             if self._queue.kz_ses.exists(str(state_path)):
                 return state_name, state_id
-        raise RuntimeError("Job state could not be determined")
+        raise exceptions.UnknownJobState("Job state could not be determined")
 
-    def wait(self, timeout_sec=60):
+    def wait(self, raise_on_error=True, timeout_sec=60):
         WATCH_INTERVAL_SEC = 1
 
         expiry = time.time() + timeout_sec
-        while self.state not in [JobStates.STATE_FAILED, JobStates.STATE_SUCCESS]:
-            if time.time() > expiry:
-                raise exceptions.TimeoutError("Job wait timed out.")
-            time.sleep(WATCH_INTERVAL_SEC)
+        try:
+            while self.state[1] not in [JobStates.STATE_FAILED, JobStates.STATE_SUCCESS]:
+                if time.time() > expiry:
+                    raise exceptions.TimeoutError("Job wait timed out.")
+                time.sleep(WATCH_INTERVAL_SEC)
+
+            if raise_on_error and self.state[1] == JobStates.STATE_FAILED:
+                raise exceptions.JobException(self.error)
+
+            return self.result
+        except exceptions.UnknownJobState:
+            pass
 
     def delete(self):
         job_path = self._queue.path_factory.job.id(self.id)
