@@ -6,6 +6,7 @@ import os
 from kazoo.client import KazooState
 from kazoo.exceptions import NoNodeError
 
+from custom_exceptions import UnknownJobState
 from helpers import get_logger
 from job import Job
 from queue import Queue
@@ -15,7 +16,8 @@ from states import JobStates, ScheduledJobStates
 
 class Scheduler(object):
     ZK_SCHEDULER_LOCK_NAME = 'scheduler-lock'
-    JOB_CLEANER_INTERVAL = 1
+    JOB_CLEANER_INTERVAL_SEC = 1
+    JOB_HISTORY_HOUR = 24
 
     def __init__(self, queue):
         self._queue = queue
@@ -105,10 +107,10 @@ class Scheduler(object):
             if self._can_push_job(scheduled_job):
                 job = Job.create(
                     self._queue,
-                    scheduled_job.name,
-                    scheduled_job.module,
-                    scheduled_job.module_kwargs,
-                    scheduled_job.priority)
+                    name = scheduled_job.name,
+                    module = scheduled_job.module,
+                    module_kwargs= scheduled_job.module_kwargs,
+                    priority= scheduled_job.priority)
                 scheduled_job.last_job_id = job.id
 
             new_next_run = time.time() + scheduled_job.interval_min * 60
@@ -118,20 +120,28 @@ class Scheduler(object):
             pass
 
     def _thread_clean_stale_job_loop(self):
-        try:
-            self._logger.info("Job cleaner is running...")
-            for job in self._queue.get_jobs(state=JobStates.STATE_RUNNING):
-                worker_path = self._queue.path_factory.worker.id(job.worker)
-                if not self._queue.kz_ses.exists(str(worker_path)):
-                    self._logger.warn("Cleaning stale job [{}]".format(job.id))
-                    job.state = JobStates.STATE_FAILED
-        except NoNodeError:
-            pass
-        finally:
-            self._logger.info("Job cleaner finished!")
-            t = Timer(self.JOB_CLEANER_INTERVAL * 60, self._thread_clean_stale_job_loop)
-            t.daemon = True
-            t.start()
+        self._logger.info("Job cleaner is running...")
+
+        for job in self._queue.get_jobs():
+            try:
+                if job.state == JobStates.STATE_RUNNING:
+                    worker_path = self._queue.path_factory.worker.id(job.worker)
+
+                    if not self._queue.kz_ses.exists(str(worker_path)):
+                        self._logger.warn("Cleaning stale job [{}]".format(job.id))
+                        job.state = JobStates.STATE_FAILED
+                else:
+                    if not job.created or time.time() - job.created > self.JOB_HISTORY_HOUR * 60 * 60:
+                        job.delete()
+            except NoNodeError:
+                pass
+            except UnknownJobState:
+                pass
+
+        self._logger.info("Job cleaner finished!")
+        t = Timer(self.JOB_CLEANER_INTERVAL_SEC * 60, self._thread_clean_stale_job_loop)
+        t.daemon = True
+        t.start()
 
     def _exit(self, code):
         self._cancel_all_timers()

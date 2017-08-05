@@ -4,11 +4,11 @@ import inspect
 import platform
 import sys
 import traceback
-
+import sys
 import os
 from kazoo.client import KazooState
 from kazoo.exceptions import NodeExistsError
-
+import signal
 from helpers import cached_prop, get_logger
 from ijobworker import IJobWorker
 from job import Job
@@ -18,9 +18,13 @@ import time
 
 
 class WorkListener(object):
+    JOB_GET_TIMEOUT_SEC = 1
+
     def __init__(self, queue):
         self._queue = queue
         self._logger = get_logger(self.id)
+
+        signal.signal(signal.SIGINT, self.__signal_handler)
 
     @cached_prop
     def id(self):
@@ -30,7 +34,9 @@ class WorkListener(object):
     def __state_handler(self, state):
         if state in [KazooState.LOST, KazooState.SUSPENDED]:
             self._logger.critical("Lost connection to ZooKeeper, exiting...")
-            os._exit(1)
+            sys.exit(1)
+    def __signal_handler(self, signal, frame):
+        sys.exit(1)
 
     def _register_worker(self):
         self._logger.info("Registering worker")
@@ -75,18 +81,24 @@ class WorkListener(object):
     def run(self, run_once=False):
         self._queue.kz_ses.add_listener(self.__state_handler)
         self._register_worker()
+
         while True:
             try:
-                job_id = self._queue._kz_queue.get()
+                job_id = self._queue._kz_queue.get(timeout=self.JOB_GET_TIMEOUT_SEC)
+                if not job_id:
+                    continue
+
                 self._queue._kz_queue.consume()
                 self._logger.info("Handling job {}".format(job_id))
                 self._handle_job(job_id)
                 self._logger.info("Finished job {}".format(job_id))
+            except SystemExit:
+                break
             except BaseException:
                 self._logger.error(traceback.format_exc())
             finally:
                 if run_once:
-                    exit(0)
+                    sys.exit(0)
 
 
 def main():
@@ -118,10 +130,11 @@ def main():
         help='Module paths')
 
     args = parser.parse_args()
-    for path in set(args.module_path):
-        sys.path.insert(0, path)
-    q = Queue(args.zkservers, args.queue)
+    if args.module_path:
+        for path in set(args.module_path):
+            sys.path.insert(0, path)
 
+    q = Queue(args.zkservers, args.queue)
     w = WorkListener(q)
     w.run(args.run_once)
 
