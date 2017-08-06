@@ -131,7 +131,7 @@ class Scheduler(object):
                         self._logger.warn("Cleaning stale job [{}]".format(job.id))
                         job.state = JobStates.STATE_FAILED
                 else:
-                    if not job.created or time.time() - job.created > self.JOB_HISTORY_HOUR * 60 * 60:
+                    if job.created and time.time() - job.created > self.JOB_HISTORY_HOUR * 60 * 60:
                         job.delete()
             except NoNodeError:
                 pass
