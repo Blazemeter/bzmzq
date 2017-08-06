@@ -11,6 +11,7 @@ from scheduled_job import ScheduledJob
 # from scheduler import Scheduler
 from states import JobStates, ScheduledJobStates
 
+
 class Queue(object):
     ZK_TREE_ROOT = 'bzmzq'
     ZK_QUEUE_LOCK_NAME = 'main-lock'

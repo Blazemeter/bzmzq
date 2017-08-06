@@ -2,9 +2,10 @@ import json
 import time
 from uuid import uuid4
 
+import custom_exceptions as exceptions
 from helpers import cached_prop
 from states import JobStates
-import custom_exceptions as exceptions
+
 
 class Job(object):
     # Write once props
@@ -37,7 +38,6 @@ class Job(object):
         job_id = str(uuid4())
         job_path = queue.path_factory.job.id(job_id)
         queue.kz_ses.ensure_path(str(job_path))
-
 
         if module_kwargs is not None and not isinstance(module_kwargs, dict):
             raise ValueError("module_kwargs can be a dict or None")

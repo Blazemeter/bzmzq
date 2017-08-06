@@ -101,16 +101,16 @@ class Scheduler(object):
         try:
             scheduled_job = ScheduledJob(self._queue, scheduled_job_id)
             self._logger.info(
-                "Pushing job scheduled job {}".format(
+                "Pushing scheduled job {}".format(
                     scheduled_job.id))
 
             if self._can_push_job(scheduled_job):
                 job = Job.create(
                     self._queue,
-                    name = scheduled_job.name,
-                    module = scheduled_job.module,
-                    module_kwargs= scheduled_job.module_kwargs,
-                    priority= scheduled_job.priority)
+                    name=scheduled_job.name,
+                    module=scheduled_job.module,
+                    module_kwargs=scheduled_job.module_kwargs,
+                    priority=scheduled_job.priority)
                 scheduled_job.last_job_id = job.id
 
             new_next_run = time.time() + scheduled_job.interval_min * 60
@@ -132,6 +132,7 @@ class Scheduler(object):
                         job.state = JobStates.STATE_FAILED
                 else:
                     if job.created and time.time() - job.created > self.JOB_HISTORY_HOUR * 60 * 60:
+                        self._logger.warn("Cleaning old job [{}]".format(job.id))
                         job.delete()
             except NoNodeError:
                 pass

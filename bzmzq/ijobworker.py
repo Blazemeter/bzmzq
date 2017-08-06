@@ -7,7 +7,7 @@ class IJobWorker(object):
     @abstractmethod
     def __init__(self, queue, job, **kwargs):
         self.queue = queue
-        self.job= job
+        self.job = job
 
     @abstractmethod
     def run(self): pass
