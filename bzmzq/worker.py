@@ -62,7 +62,9 @@ class WorkListener(object):
         job.worker = self.id
         job.state = JobStates.STATE_RUNNING
         job.started = time.time()
-
+        self._logger.info(
+            "Running job params are [{name}] [{module}] [{module_kwargs}]".format(name=job.name, module=job.module,
+                                                                                  module_kwargs=job.modules_kwargs))
         try:
             found_cls = self._import_class(job.module)
             inst = found_cls(self._queue, job, **job.module_kwargs)
