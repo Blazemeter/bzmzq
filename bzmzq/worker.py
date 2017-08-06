@@ -72,6 +72,8 @@ class WorkListener(object):
                 inst.teardown()
         except BaseException:
             job.error = traceback.format_exc()
+            self._logger.info("Failed job {}".format(job_id))
+            self._logger.debug(traceback.format_exc())
             job.state = JobStates.STATE_FAILED
         else:
             job.state = JobStates.STATE_SUCCESS
