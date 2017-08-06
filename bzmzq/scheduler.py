@@ -91,7 +91,7 @@ class Scheduler(object):
             try:
                 last_job = Job(self._queue, scheduled_job.last_job_id)
                 _, last_job_state_id = last_job.state
-                if last_job_state_id == JobStates.STATE_RUNNING:
+                if last_job_state_id in [JobStates.STATE_RUNNING, JobStates.STATE_PENDING]:
                     return False
             except NoNodeError:
                 pass
