@@ -2,24 +2,23 @@ import argparse
 import importlib
 import inspect
 import platform
+import signal
 import sys
+import time
 import traceback
-import sys
+
 import os
 from kazoo.client import KazooState
 from kazoo.exceptions import NodeExistsError
-import signal
+
 from helpers import cached_prop, get_logger
 from ijobworker import IJobWorker
 from job import Job
 from queue import Queue
 from states import JobStates
-import time
 
 
 class WorkListener(object):
-    JOB_GET_TIMEOUT_SEC = 1
-
     def __init__(self, queue):
         self._queue = queue
         self._logger = get_logger(self.id)
@@ -35,6 +34,7 @@ class WorkListener(object):
         if state in [KazooState.LOST, KazooState.SUSPENDED]:
             self._logger.critical("Lost connection to ZooKeeper, exiting...")
             sys.exit(1)
+
     def __signal_handler(self, signal, frame):
         sys.exit(1)
 
@@ -86,10 +86,7 @@ class WorkListener(object):
 
         while True:
             try:
-                job_id = self._queue._kz_queue.get(timeout=self.JOB_GET_TIMEOUT_SEC)
-                if not job_id:
-                    continue
-
+                job_id = self._queue._kz_queue.get()
                 self._queue._kz_queue.consume()
                 self._logger.info("Handling job {}".format(job_id))
                 self._handle_job(job_id)
