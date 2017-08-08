@@ -24,6 +24,8 @@ class ScheduledJob(object):
     DEFAULT_PRIORITY = 100
     DEFAULT_INTERVAL = 1
 
+    BAD_CHARS = ['/']
+
     def __init__(self, queue, scheduled_job_id):
         self._queue = queue
         self._scheduled_job_id = scheduled_job_id
@@ -33,6 +35,10 @@ class ScheduledJob(object):
             cls, queue, scheduled_job_id, name, module, module_kwargs=None,
             priority=DEFAULT_PRIORITY, interval_min=DEFAULT_INTERVAL,
             concurrent=True, override=False):
+
+        for c in cls.BAD_CHARS:
+            if c in scheduled_job_id:
+                raise ValueError("Char {} not allowed in scheduled_job_id".format(c))
 
         scheduled_job_path = queue.path_factory.scheduled_job.id(
             scheduled_job_id)
