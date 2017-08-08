@@ -17,7 +17,7 @@ from states import JobStates, ScheduledJobStates
 class Scheduler(object):
     ZK_SCHEDULER_LOCK_NAME = 'scheduler-lock'
     JOB_CLEANER_INTERVAL_SEC = 1
-    JOB_HISTORY_HOUR = 24
+    JOB_HISTORY_HOUR = 1
 
     def __init__(self, queue):
         self._queue = queue
