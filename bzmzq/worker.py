@@ -1,11 +1,13 @@
 import argparse
 import importlib
 import inspect
+import logging
 import platform
 import signal
 import sys
 import time
 import traceback
+from cStringIO import StringIO as StringBuffer
 
 import os
 from kazoo.client import KazooState
@@ -57,6 +59,21 @@ class WorkListener(object):
                 return cls_obj
         raise ImportError("Could not find a class implementing IJobWorker")
 
+    def _get_logger_for_job(self, job_id):
+        logger = logging.getLogger('job.' + job_id)
+        logger.setLevel(logging.DEBUG)
+
+        log_capture_string = StringBuffer()
+        ch = logging.StreamHandler(log_capture_string)
+        ch.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+
+        logger.addHandler(ch)
+
+        return logger, log_capture_string
+
     def _handle_job(self, job_id):
         job = Job(self._queue, job_id)
         job.worker = self.id
@@ -65,9 +82,12 @@ class WorkListener(object):
         self._logger.info(
             "Running job params are [{name}] [{module}] [{module_kwargs}]".format(name=job.name, module=job.module,
                                                                                   module_kwargs=job.module_kwargs))
+
+        job_logger, job_log_buffer = self._get_logger_for_job(job_id)
         try:
+
             found_cls = self._import_class(job.module)
-            inst = found_cls(self._queue, job, **job.module_kwargs)
+            inst = found_cls(self._queue, job, job_logger, **job.module_kwargs)
             try:
                 job.result = inst.run()
             finally:
@@ -81,6 +101,8 @@ class WorkListener(object):
             job.state = JobStates.STATE_SUCCESS
         finally:
             job.ended = time.time()
+            job.log = job_log_buffer.getvalue()
+            job_log_buffer.close()
 
     def run(self, run_once=False):
         self._queue.kz_ses.add_listener(self.__state_handler)

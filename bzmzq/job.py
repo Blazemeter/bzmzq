@@ -20,7 +20,8 @@ class Job(object):
         'result',
         'error',
         'worker',
-        'parent_job_id'
+        'parent_job_id',
+        'log'
     ]
     DYNAMIC_PROPS = ['state']
     ALLOWED_PROPS = WO_STATIC_PROPS + DYNAMIC_PROPS
