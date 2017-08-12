@@ -32,12 +32,15 @@ def get_logger(name):
     import sys
     import logging
     import os
+
     logger = logging.getLogger(name)
     lh = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     lh.setFormatter(formatter)
     logger.addHandler(lh)
-    logger.setLevel(logging.INFO)
+
+    log_level = os.environ.get('BZMZQ_LOG_LEVEL', 'INFO')
+    logger.setLevel(log_level)
 
     if 'NO_BZMZQ_LOGS' in os.environ:
         logger.disabled = True

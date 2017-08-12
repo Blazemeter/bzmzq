@@ -11,7 +11,7 @@ class ScheduledJob(object):
         'name',
         'module',
         'module_kwargs',
-        'interval_min',
+        'interval_sec',
         'concurrent',
         'next_run',
         'last_job_id',
@@ -22,7 +22,9 @@ class ScheduledJob(object):
     ALLOWED_PROPS = WO_STATIC_PROPS + DYNAMIC_PROPS
 
     DEFAULT_PRIORITY = 100
-    DEFAULT_INTERVAL = 1
+    DEFAULT_INTERVAL = 60
+
+    MINIMUM_INTERVAL_SEC = 3
 
     BAD_CHARS = ['/']
 
@@ -33,12 +35,15 @@ class ScheduledJob(object):
     @classmethod
     def create(
             cls, queue, scheduled_job_id, name, module, module_kwargs=None,
-            priority=DEFAULT_PRIORITY, interval_min=DEFAULT_INTERVAL,
+            priority=DEFAULT_PRIORITY, interval_sec=DEFAULT_INTERVAL,
             concurrent=True, override=False):
 
         for c in cls.BAD_CHARS:
             if c in scheduled_job_id:
                 raise ValueError("Char {} not allowed in scheduled_job_id".format(c))
+
+        if interval_sec < cls.MINIMUM_INTERVAL_SEC:
+            raise ValueError("Minmum interval for a scheudled job is {}".format(cls.MINIMUM_INTERVAL_SEC))
 
         scheduled_job_path = queue.path_factory.scheduled_job.id(
             scheduled_job_id)
@@ -62,7 +67,7 @@ class ScheduledJob(object):
         sj.name = name
         sj.module = module
         sj.module_kwargs = module_kwargs if module_kwargs else {}
-        sj.interval_min = interval_min
+        sj.interval_sec = interval_sec
         sj.concurrent = concurrent
         sj.priority = priority
         sj.state = ScheduledJobStates.STATE_ENABLED

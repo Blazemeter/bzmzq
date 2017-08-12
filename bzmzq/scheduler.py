@@ -16,8 +16,8 @@ from states import JobStates, ScheduledJobStates
 
 class Scheduler(object):
     ZK_SCHEDULER_LOCK_NAME = 'scheduler-lock'
-    JOB_CLEANER_INTERVAL_SEC = 1
-    JOB_HISTORY_HOUR = 1
+    JOB_CLEANER_INTERVAL_SEC = 60
+    JOB_HISTORY_MIN = 10
 
     def __init__(self, queue):
         self._queue = queue
@@ -94,7 +94,9 @@ class Scheduler(object):
                 if last_job_state_id in [JobStates.STATE_RUNNING, JobStates.STATE_PENDING]:
                     return False
             except NoNodeError:
-                pass
+                return False
+            except UnknownJobState:
+                return False
         return True
 
     def _thread_push_job(self, scheduled_job_id):
@@ -113,7 +115,7 @@ class Scheduler(object):
                     priority=scheduled_job.priority)
                 scheduled_job.last_job_id = job.id
 
-            new_next_run = time.time() + scheduled_job.interval_min * 60
+            new_next_run = time.time() + scheduled_job.interval_sec
             scheduled_job.next_run = new_next_run
             self._set_scheduled_job_timer(scheduled_job)
         except NoNodeError:
@@ -128,11 +130,11 @@ class Scheduler(object):
                     worker_path = self._queue.path_factory.worker.id(job.worker)
 
                     if not self._queue.kz_ses.exists(str(worker_path)):
-                        self._logger.warn("Cleaning stale job [{}]".format(job.id))
+                        self._logger.info("Cleaning stale job [{}]".format(job.id))
                         job.state = JobStates.STATE_FAILED
                 else:
-                    if job.created and time.time() - job.created > self.JOB_HISTORY_HOUR * 60 * 60:
-                        self._logger.warn("Cleaning old job [{}]".format(job.id))
+                    if job.created and time.time() - job.created > self.JOB_HISTORY_MIN * 60:
+                        self._logger.info("Cleaning old job [{}]".format(job.id))
                         job.delete()
             except NoNodeError:
                 pass
@@ -140,7 +142,7 @@ class Scheduler(object):
                 pass
 
         self._logger.info("Job cleaner finished!")
-        t = Timer(self.JOB_CLEANER_INTERVAL_SEC * 60, self._thread_clean_stale_job_loop)
+        t = Timer(self.JOB_CLEANER_INTERVAL_SEC, self._thread_clean_stale_job_loop)
         t.daemon = True
         t.start()
 

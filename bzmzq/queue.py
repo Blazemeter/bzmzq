@@ -6,7 +6,6 @@ from kazoo.client import KazooClient
 from helpers import cached_prop
 from job import Job
 from path import PathFactory
-from rlock import RLock
 from scheduled_job import ScheduledJob
 # from scheduler import Scheduler
 from states import JobStates, ScheduledJobStates
@@ -53,14 +52,14 @@ class Queue(object):
 
     def get_lock(self, lock_name=None):
         with self._tlock:
-            lock_name = self.ZK_QUEUE_LOCK_NAME if lock_name else lock_name
+            lock_name = lock_name if lock_name else self.ZK_QUEUE_LOCK_NAME
             cached_lock = self._rlock_cache.get(lock_name)
 
             if cached_lock:
                 return cached_lock
 
             lock_path = self.path_factory.lock.name(lock_name)
-            new_lock = RLock(self.kz_ses, str(lock_path))
+            new_lock = self.kz_ses.Lock(str(lock_path))
             self._rlock_cache[lock_name] = new_lock
             return new_lock
 
