@@ -46,6 +46,7 @@ class WorkListener(object):
 
         try:
             self._queue.kz_ses.create(path=my_worker_path, ephemeral=True)
+            self._queue.kz_ses.sync(my_worker_path)
         except NodeExistsError:
             pass
 

@@ -30,6 +30,7 @@ class Queue(object):
 
         self._make_paths()
 
+
     @cached_prop
     def path_factory(self):
         return PathFactory(self)
@@ -40,15 +41,19 @@ class Queue(object):
 
     def _make_paths(self):
         for root_path in self.path_factory.get_path_roots():
+            root_path = str(root_path)
             self.kz_ses.ensure_path(str(root_path))
+            self.kz_ses.sync(root_path)
 
         for state_id in JobStates().values():
-            state_path = self.path_factory.job_state.id(state_id)
+            state_path = str(self.path_factory.job_state.id(state_id))
             self.kz_ses.ensure_path(str(state_path))
+            self.kz_ses.sync(state_path)
 
         for state_id in ScheduledJobStates().values():
-            state_path = self.path_factory.scheduled_job_state.id(state_id)
+            state_path = str(self.path_factory.scheduled_job_state.id(state_id))
             self.kz_ses.ensure_path(str(state_path))
+            self.kz_ses.sync(state_path)
 
     def get_lock(self, lock_name=None):
         with self._tlock:

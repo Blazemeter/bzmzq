@@ -45,23 +45,23 @@ class ScheduledJob(object):
         if interval_sec < cls.MINIMUM_INTERVAL_SEC:
             raise ValueError("Minmum interval for a scheudled job is {}".format(cls.MINIMUM_INTERVAL_SEC))
 
-        scheduled_job_path = queue.path_factory.scheduled_job.id(
-            scheduled_job_id)
-        if queue.kz_ses.exists(str(scheduled_job_path)):
+        scheduled_job_path = str(queue.path_factory.scheduled_job.id(scheduled_job_id))
+        if queue.kz_ses.exists(scheduled_job_path):
             if not override:
                 raise RuntimeError(
                     "Scheduled job already exists and override set to false")
             cls(queue, scheduled_job_id).delete()
 
-        queue.kz_ses.ensure_path(str(scheduled_job_path))
+        queue.kz_ses.ensure_path(scheduled_job_path)
+        queue.kz_ses.sync(scheduled_job_path)
 
         if module_kwargs is not None and not isinstance(module_kwargs, dict):
             raise ValueError("module_kwargs can be a dict or None")
 
         for prop in cls.WO_STATIC_PROPS:
-            prop_path = queue.path_factory.scheduled_job.prop(
-                scheduled_job_id, prop)
-            queue.kz_ses.ensure_path(str(prop_path))
+            prop_path = str(queue.path_factory.scheduled_job.prop(scheduled_job_id, prop))
+            queue.kz_ses.ensure_path(prop_path)
+            queue.kz_ses.sync(prop_path)
 
         sj = cls(queue, scheduled_job_id)
         sj.name = name
@@ -83,27 +83,29 @@ class ScheduledJob(object):
             raise ValueError(
                 "Prop [{}] is not in allowed prop list".format(prop))
 
-        prop_path = self._queue.path_factory.scheduled_job.prop(self.id, prop)
-        self._queue.kz_ses.set(str(prop_path), json.dumps(val))
+        prop_path = str(self._queue.path_factory.scheduled_job.prop(self.id, prop))
+        self._queue.kz_ses.set(prop_path, json.dumps(val))
+        self._queue.kz_ses.sync(prop_path)
 
     def _get_prop(self, prop):
-        prop_path = self._queue.path_factory.scheduled_job.prop(self.id, prop)
-        val, _ = self._queue.kz_ses.get(str(prop_path))
+        prop_path = str(self._queue.path_factory.scheduled_job.prop(self.id, prop))
+        self._queue.kz_ses.sync(prop_path)
+        val, _ = self._queue.kz_ses.get(prop_path)
         return None if val == '' else json.loads(val)
 
     def _reset_state(self):
         for state_name, state_id in ScheduledJobStates().iteritems():
-            state_path = self._queue.path_factory.scheduled_job.state(
-                self.id, state_id)
-            self._queue.kz_ses.delete(str(state_path), recursive=True)
+            state_path = str(self._queue.path_factory.scheduled_job.state(self.id, state_id))
+            self._queue.kz_ses.delete(state_path, recursive=True)
+            self._queue.kz_ses.sync(state_path)
 
     def _set_state(self, state_id):
         if state_id not in ScheduledJobStates().values():
             raise ValueError("State [{}] is unknown".format(state_id))
         self._reset_state()
-        state_path = self._queue.path_factory.scheduled_job.state(
-            self.id, state_id)
-        self._queue.kz_ses.ensure_path(str(state_path))
+        state_path = str(self._queue.path_factory.scheduled_job.state(self.id, state_id))
+        self._queue.kz_ses.ensure_path(state_path)
+        self._queue.kz_ses.sync(state_path)
 
     def _get_state(self):
         for state_name, state_id in JobStates().iteritems():
@@ -114,9 +116,10 @@ class ScheduledJob(object):
         raise RuntimeError("Scheduled Job state could not be determined")
 
     def delete(self):
-        scheduled_job_path = self._queue.path_factory.scheduled_job.id(self.id)
+        scheduled_job_path = str(self._queue.path_factory.scheduled_job.id(self.id))
         self._reset_state()
-        self._queue.kz_ses.delete(str(scheduled_job_path), recursive=True)
+        self._queue.kz_ses.delete(scheduled_job_path, recursive=True)
+        self._queue.kz_ses.sync(scheduled_job_path)
 
     def __getattr__(self, prop):
         if prop not in self.ALLOWED_PROPS:
