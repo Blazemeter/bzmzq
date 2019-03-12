@@ -45,7 +45,7 @@ class Job(object):
         if module_kwargs is not None and not isinstance(module_kwargs, dict):
             raise ValueError("module_kwargs can be a dict or None")
 
-        for prop in cls.WO_STATIC_PROPS:
+        for prop in cls.ALLOWED_PROPS:
             prop_path = str(queue.path_factory.job.prop(job_id, prop))
             queue.kz_ses.ensure_path(prop_path)
             queue.kz_ses.sync(prop_path)
@@ -70,8 +70,10 @@ class Job(object):
                 "Prop [{}] is not in allowed prop list".format(prop))
 
         prop_path = str(self._queue.path_factory.job.prop(self.id, prop))
-        if self._get_prop(prop):
+
+        if self._get_prop(prop) and prop in self.WO_STATIC_PROPS:
             raise RuntimeError("You can not change props after they were set")
+
         self._queue.kz_ses.set(prop_path, json.dumps(val))
         self._queue.kz_ses.sync(prop_path)
 
@@ -98,12 +100,14 @@ class Job(object):
         self._queue.kz_ses.sync(state_path)
 
     def _get_state(self):
-        for state_name, state_id in JobStates().iteritems():
-            state_path = str(self._queue.path_factory.job.state(self.id, state_id))
-            self._queue.kz_ses.sync(state_path)
-            if self._queue.kz_ses.exists(state_path):
-                return state_name, state_id
-        raise exceptions.UnknownJobState("Job state could not be determined")
+        state_id = self._get_prop('state')
+        state_name = {k:v for k, v in JobStates().iteritems() if v == state_id}
+
+        if not state_name:
+            raise exceptions.UnknownJobState("Job state could not be determined")
+
+        return state_name.values()[0], state_id
+
 
     def wait(self, raise_on_error=True, timeout_sec=60):
         WATCH_INTERVAL_SEC = 1
@@ -136,9 +140,10 @@ class Job(object):
         raise AttributeError("Could not find prop [{}]".format(prop))
 
     def __setattr__(self, name, value):
-        if name == 'state':
-            self._set_state(value)
-        elif name not in self.ALLOWED_PROPS:
+        if name not in self.ALLOWED_PROPS:
             return super(Job, self).__setattr__(name, value)
         else:
             self._set_prop(name, value)
+            if name == 'state' and value == JobStates.STATE_PENDING:
+                self._queue._kz_queue.put(self._job_id, self._priority)
+
