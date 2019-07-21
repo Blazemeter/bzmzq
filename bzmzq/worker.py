@@ -18,12 +18,17 @@ from ijobworker import IJobWorker
 from job import Job
 from queue import Queue
 from states import JobStates
-
+from threading import Event
 
 class WorkListener(object):
+    TIMEOUT_QUEUE_GET_SECS = 3
+
     def __init__(self, queue):
         self._queue = queue
         self._logger = get_logger(self.id)
+        self._kz_logger = get_logger('kazoo.client')
+        self._code_exit = 0
+        self._event_should_exit = Event()
 
         signal.signal(signal.SIGINT, self.__signal_handler)
 
@@ -35,10 +40,12 @@ class WorkListener(object):
     def __state_handler(self, state):
         if state in [KazooState.LOST, KazooState.SUSPENDED]:
             self._logger.critical("Lost connection to ZooKeeper, exiting...")
-            sys.exit(1)
+            self._code_exit = 1
+            self._event_should_exit.set()
 
     def __signal_handler(self, signal, frame):
-        sys.exit(1)
+        self._code_exit = 1
+        self._event_should_exit.set()
 
     def _register_worker(self):
         self._logger.info("Registering worker")
@@ -105,13 +112,20 @@ class WorkListener(object):
             job.log = job_log_buffer.getvalue()
             job_log_buffer.close()
 
+    def _my_exit(self):
+        sys.exit(self._code_exit)
+
     def run(self, run_once=False):
         self._queue.kz_ses.add_listener(self.__state_handler)
         self._register_worker()
 
-        while True:
+        while not self._event_should_exit.is_set():
             try:
-                job_id = self._queue._kz_queue.get()
+                job_id = self._queue._kz_queue.get(timeout=self.TIMEOUT_QUEUE_GET_SECS)
+
+                if job_id is None:
+                    continue
+
                 self._queue._kz_queue.consume()
                 self._logger.info("Handling job {}".format(job_id))
                 self._handle_job(job_id)
@@ -122,7 +136,9 @@ class WorkListener(object):
                 self._logger.error(traceback.format_exc())
             finally:
                 if run_once:
-                    sys.exit(0)
+                    self._event_should_exit.set()
+
+        self._my_exit()
 
 
 def main():
