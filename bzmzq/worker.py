@@ -120,6 +120,8 @@ class WorkListener(object):
         self._register_worker()
 
         while not self._event_should_exit.is_set():
+            job_id = None
+
             try:
                 job_id = self._queue._kz_queue.get(timeout=self.TIMEOUT_QUEUE_GET_SECS)
 
@@ -135,7 +137,7 @@ class WorkListener(object):
             except BaseException:
                 self._logger.error(traceback.format_exc())
             finally:
-                if run_once:
+                if job_id is not None and run_once:
                     self._event_should_exit.set()
 
         self._my_exit()
