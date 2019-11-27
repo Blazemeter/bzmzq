@@ -64,7 +64,7 @@ class Job(object):
 
     @cached_prop
     def id(self):
-        return self._job_id
+        return self._job_id if isinstance(self._job_id, str) else self._job_id.decode(DEFAULT_ENCODING)
 
     def _set_prop(self, prop, val):
         if prop not in self.ALLOWED_PROPS:
@@ -81,7 +81,6 @@ class Job(object):
 
     def _get_prop(self, prop):
         prop_path = str(self._queue.path_factory.job.prop(self.id, prop))
-        print(prop_path)
         self._queue.kz_ses.sync(prop_path)
         val, _ = self._queue.kz_ses.get(prop_path)
         val = val.decode(DEFAULT_ENCODING)
