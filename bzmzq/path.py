@@ -13,9 +13,7 @@ def no_tree_traversal(func):
     return __wrapper
 
 
-class _PathBase(object):
-    __metaclass__ = ABCMeta
-
+class _PathBase(object, metaclass=ABCMeta):
     SEP = '/'
     ROOT_METHOD = 'root'
 

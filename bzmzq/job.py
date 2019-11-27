@@ -87,13 +87,13 @@ class Job(object):
         return None if val == '' or val is None else json.loads(val)
 
     def _reset_state(self):
-        for state_name, state_id in JobStates().items():
+        for state_name, state_id in list(JobStates().items()):
             state_path = str(self._queue.path_factory.job.state(self.id, state_id))
             self._queue.kz_ses.delete(state_path, recursive=True)
             self._queue.kz_ses.sync(state_path)
 
     def _set_state(self, state_id):
-        if state_id not in JobStates().values():
+        if state_id not in list(JobStates().values()):
             raise ValueError("State [{}] is unknown".format(state_id))
         self._reset_state()
         if state_id == JobStates.STATE_PENDING:
@@ -104,12 +104,12 @@ class Job(object):
 
     def _get_state(self):
         state_id = self._get_prop('state')
-        state_name = {k: v for k, v in JobStates().items() if v == state_id}
+        state_name = {k: v for k, v in list(JobStates().items()) if v == state_id}
 
         if not state_name:
             raise exceptions.UnknownJobState("Job state could not be determined")
 
-        return state_name.values()[0], state_id
+        return list(state_name.values())[0], state_id
 
     def wait(self, raise_on_error=True, timeout_sec=60):
         WATCH_INTERVAL_SEC = 1
