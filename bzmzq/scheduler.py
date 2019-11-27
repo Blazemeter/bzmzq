@@ -6,12 +6,12 @@ import os
 from kazoo.client import KazooState
 from kazoo.exceptions import NoNodeError
 
-from custom_exceptions import UnknownJobState
-from helpers import get_logger
-from job import Job
+from .custom_exceptions import UnknownJobState
+from .helpers import get_logger
+from .job import Job
 from queue import Queue
-from scheduled_job import ScheduledJob
-from states import JobStates, ScheduledJobStates
+from .scheduled_job import ScheduledJob
+from .states import JobStates, ScheduledJobStates
 
 
 class Scheduler(object):

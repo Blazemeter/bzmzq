@@ -1,7 +1,7 @@
 import json
 
-from helpers import cached_prop
-from states import JobStates, ScheduledJobStates
+from .helpers import cached_prop
+from .states import JobStates, ScheduledJobStates
 
 
 class ScheduledJob(object):

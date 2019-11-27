@@ -7,18 +7,19 @@ import signal
 import sys
 import time
 import traceback
-from cStringIO import StringIO as StringBuffer
+from io import StringIO as StringBuffer
 
 import os
 from kazoo.client import KazooState
 from kazoo.exceptions import NodeExistsError
 
-from helpers import cached_prop, get_logger
-from ijobworker import IJobWorker
-from job import Job
+from .helpers import cached_prop, get_logger
+from .ijobworker import IJobWorker
+from .job import Job
 from queue import Queue
-from states import JobStates
+from .states import JobStates
 from threading import Event
+
 
 class WorkListener(object):
     TIMEOUT_QUEUE_GET_SECS = 3
