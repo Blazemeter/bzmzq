@@ -6,6 +6,8 @@ from bzmzq import custom_exceptions as exceptions
 from .helpers import cached_prop
 from .states import JobStates
 
+DEFAULT_ENCODING = 'utf-8'
+
 
 class Job(object):
     # Write once props
@@ -74,14 +76,15 @@ class Job(object):
         if self._get_prop(prop) and prop in self.WO_STATIC_PROPS:
             raise RuntimeError("You can not change props after they were set")
 
-        self._queue.kz_ses.set(prop_path, json.dumps(val))
+        self._queue.kz_ses.set(prop_path, json.dumps(val).encode(DEFAULT_ENCODING))
         self._queue.kz_ses.sync(prop_path)
 
     def _get_prop(self, prop):
         prop_path = str(self._queue.path_factory.job.prop(self.id, prop))
         self._queue.kz_ses.sync(prop_path)
         val, _ = self._queue.kz_ses.get(prop_path)
-        return None if val == '' else json.loads(val)
+        val = val.decode('utf-8')
+        return None if val == '' or val is None else json.loads(val)
 
     def _reset_state(self):
         for state_name, state_id in JobStates().items():
