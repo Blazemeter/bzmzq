@@ -83,7 +83,7 @@ class Job(object):
         prop_path = str(self._queue.path_factory.job.prop(self.id, prop))
         self._queue.kz_ses.sync(prop_path)
         val, _ = self._queue.kz_ses.get(prop_path)
-        val = val.decode('utf-8')
+        val = val.decode(DEFAULT_ENCODING)
         return None if val == '' or val is None else json.loads(val)
 
     def _reset_state(self):
@@ -97,7 +97,7 @@ class Job(object):
             raise ValueError("State [{}] is unknown".format(state_id))
         self._reset_state()
         if state_id == JobStates.STATE_PENDING:
-            self._queue._kz_queue.put(self._job_id, self._priority)
+            self._queue._kz_queue.put(self._job_id.encode(DEFAULT_ENCODING), self._priority)
         state_path = str(self._queue.path_factory.job.state(self.id, state_id))
         self._queue.kz_ses.ensure_path(state_path)
         self._queue.kz_ses.sync(state_path)
@@ -147,4 +147,4 @@ class Job(object):
         else:
             self._set_prop(name, value)
             if name == 'state' and value == JobStates.STATE_PENDING:
-                self._queue._kz_queue.put(self._job_id, self._priority)
+                self._queue._kz_queue.put(self._job_id.encode(DEFAULT_ENCODING), self._priority)
