@@ -84,7 +84,7 @@ class Job(object):
         return None if val == '' else json.loads(val)
 
     def _reset_state(self):
-        for state_name, state_id in JobStates().iteritems():
+        for state_name, state_id in JobStates().items():
             state_path = str(self._queue.path_factory.job.state(self.id, state_id))
             self._queue.kz_ses.delete(state_path, recursive=True)
             self._queue.kz_ses.sync(state_path)
@@ -101,7 +101,7 @@ class Job(object):
 
     def _get_state(self):
         state_id = self._get_prop('state')
-        state_name = {k: v for k, v in JobStates().iteritems() if v == state_id}
+        state_name = {k: v for k, v in JobStates().items() if v == state_id}
 
         if not state_name:
             raise exceptions.UnknownJobState("Job state could not be determined")

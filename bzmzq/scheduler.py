@@ -52,7 +52,7 @@ class Scheduler(object):
 
     def _cancel_all_timers(self):
         with self._timers_lock:
-            for _, timer in self._timers.iteritems():
+            for _, timer in self._timers.items():
                 timer.cancel()
             self._timers = {}
 

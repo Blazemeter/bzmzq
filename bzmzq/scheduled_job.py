@@ -94,7 +94,7 @@ class ScheduledJob(object):
         return None if val == '' else json.loads(val)
 
     def _reset_state(self):
-        for state_name, state_id in ScheduledJobStates().iteritems():
+        for state_name, state_id in ScheduledJobStates().items():
             state_path = str(self._queue.path_factory.scheduled_job.state(self.id, state_id))
             self._queue.kz_ses.delete(state_path, recursive=True)
             self._queue.kz_ses.sync(state_path)
@@ -108,7 +108,7 @@ class ScheduledJob(object):
         self._queue.kz_ses.sync(state_path)
 
     def _get_state(self):
-        for state_name, state_id in JobStates().iteritems():
+        for state_name, state_id in JobStates().items():
             state_path = self._queue.path_factory.scheduled_job.state(
                 self.id, state_id)
             if self._queue.kz_ses.exists(str(state_path)):
