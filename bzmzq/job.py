@@ -2,9 +2,9 @@ import json
 import time
 from uuid import uuid4
 
-import custom_exceptions as exceptions
-from helpers import cached_prop
-from states import JobStates
+from bzmzq import custom_exceptions as exceptions
+from .helpers import cached_prop
+from .states import JobStates
 
 
 class Job(object):
@@ -101,13 +101,12 @@ class Job(object):
 
     def _get_state(self):
         state_id = self._get_prop('state')
-        state_name = {k:v for k, v in JobStates().iteritems() if v == state_id}
+        state_name = {k: v for k, v in JobStates().iteritems() if v == state_id}
 
         if not state_name:
             raise exceptions.UnknownJobState("Job state could not be determined")
 
         return state_name.values()[0], state_id
-
 
     def wait(self, raise_on_error=True, timeout_sec=60):
         WATCH_INTERVAL_SEC = 1
@@ -146,4 +145,3 @@ class Job(object):
             self._set_prop(name, value)
             if name == 'state' and value == JobStates.STATE_PENDING:
                 self._queue._kz_queue.put(self._job_id, self._priority)
-

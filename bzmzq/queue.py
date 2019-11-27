@@ -3,12 +3,12 @@ from weakref import WeakValueDictionary
 
 from kazoo.client import KazooClient
 
-from helpers import cached_prop
-from job import Job
-from path import PathFactory
-from scheduled_job import ScheduledJob
+from .helpers import cached_prop
+from .job import Job
+from .path import PathFactory
+from .scheduled_job import ScheduledJob
 # from scheduler import Scheduler
-from states import JobStates, ScheduledJobStates
+from .states import JobStates, ScheduledJobStates
 
 
 class Queue(object):
@@ -29,7 +29,6 @@ class Queue(object):
         self._rlock_cache = WeakValueDictionary()  # {<rlock_name>: RLock}
 
         self._make_paths()
-
 
     @cached_prop
     def path_factory(self):

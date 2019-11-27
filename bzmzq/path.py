@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from functools import wraps
 
-from helpers import ZkPath, cached_prop
+from .helpers import ZkPath, cached_prop
 
 
 def no_tree_traversal(func):

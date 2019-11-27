@@ -1,4 +1,4 @@
-from threading import Lock as TLock, _get_ident
+from threading import Lock as TLock, get_ident
 
 from kazoo.recipe.lock import Lock
 
@@ -13,7 +13,7 @@ class RLock(Lock):
     def acquire(self, blocking=True, timeout=None):
         with self._reference_lock:
             # You are the man, bump the ref count
-            if self._lock_holding_thread == _get_ident():
+            if self._lock_holding_thread == get_ident():
                 self._reference_count += 1
                 return True
 
@@ -21,7 +21,7 @@ class RLock(Lock):
 
         if lock_result:
             with self._reference_lock:
-                self._lock_holding_thread = _get_ident()
+                self._lock_holding_thread = get_ident()
                 self._reference_count = 1
         return lock_result
 
@@ -32,7 +32,7 @@ class RLock(Lock):
     def release(self):
         with self._reference_lock:
             # You never had the lock :(
-            if self._lock_holding_thread != _get_ident():
+            if self._lock_holding_thread != get_ident():
                 return False
 
             self._reference_count -= 1
