@@ -2,7 +2,7 @@ class _BaseState(object):
     @classmethod
     def __new__(cls, *args, **kwargs):
         return {state_name: state_id
-                for state_name, state_id in cls.__dict__.items()
+                for state_name, state_id in list(cls.__dict__.items())
                 if state_name.startswith("STATE")}
 
 

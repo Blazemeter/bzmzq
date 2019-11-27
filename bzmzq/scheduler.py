@@ -9,7 +9,7 @@ from kazoo.exceptions import NoNodeError
 from .custom_exceptions import UnknownJobState
 from .helpers import get_logger
 from .job import Job
-from queue import Queue
+from .queue import Queue
 from .scheduled_job import ScheduledJob
 from .states import JobStates, ScheduledJobStates
 
@@ -52,7 +52,7 @@ class Scheduler(object):
 
     def _cancel_all_timers(self):
         with self._timers_lock:
-            for _, timer in self._timers.items():
+            for _, timer in list(self._timers.items()):
                 timer.cancel()
             self._timers = {}
 

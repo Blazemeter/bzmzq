@@ -1,9 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 
-class IJobWorker(object):
-    __metaclass__ = ABCMeta
-
+class IJobWorker(object, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self, queue, job, logger, **kwargs):
         self.queue = queue

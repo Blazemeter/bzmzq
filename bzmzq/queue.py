@@ -44,12 +44,12 @@ class Queue(object):
             self.kz_ses.ensure_path(str(root_path))
             self.kz_ses.sync(root_path)
 
-        for state_id in JobStates().values():
+        for state_id in list(JobStates().values()):
             state_path = str(self.path_factory.job_state.id(state_id))
             self.kz_ses.ensure_path(str(state_path))
             self.kz_ses.sync(state_path)
 
-        for state_id in ScheduledJobStates().values():
+        for state_id in list(ScheduledJobStates().values()):
             state_path = str(self.path_factory.scheduled_job_state.id(state_id))
             self.kz_ses.ensure_path(str(state_path))
             self.kz_ses.sync(state_path)
@@ -77,7 +77,7 @@ class Queue(object):
         if state is None:
             path = str(self.path_factory.job.root())
         else:
-            if state not in JobStates().values():
+            if state not in list(JobStates().values()):
                 raise ValueError("Unknown job state")
             path = str(self.path_factory.job_state.id(state))
 
@@ -88,7 +88,7 @@ class Queue(object):
         if state is None:
             path = str(self.path_factory.scheduled_job.root())
         else:
-            if state not in ScheduledJobStates().values():
+            if state not in list(ScheduledJobStates().values()):
                 raise ValueError("Unknown scheduled job state")
             path = str(self.path_factory.scheduled_job_state.id(state))
         return [ScheduledJob(self, scheduled_job_id)

@@ -15,8 +15,8 @@ from kazoo.exceptions import NodeExistsError
 
 from .helpers import cached_prop, get_logger
 from .ijobworker import IJobWorker
-from .job import Job
-from queue import Queue
+from .job import Job, DEFAULT_ENCODING
+from .queue import Queue
 from .states import JobStates
 from threading import Event
 
@@ -60,7 +60,7 @@ class WorkListener(object):
 
     def _import_class(self, module_name):
         imported_module = importlib.import_module(module_name)
-        reload(imported_module)
+        importlib.reload(imported_module)
         for cls_name, cls_obj in inspect.getmembers(
                 imported_module, inspect.isclass):
             if cls_obj.__name__ != IJobWorker.__name__ and IJobWorker.__name__ in [base_cls.__name__ for base_cls in
@@ -128,6 +128,8 @@ class WorkListener(object):
 
                 if job_id is None:
                     continue
+
+                job_id = job_id if isinstance(job_id, str) else job_id.decode(DEFAULT_ENCODING)
 
                 self._queue._kz_queue.consume()
                 self._logger.info("Handling job {}".format(job_id))
