@@ -11,7 +11,7 @@ setup(name='bzmzq',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          'kazoo==2.6.1',
+          'kazoo==2.8.0',
       ],
       entry_points={
           "console_scripts": ['bzmzq-worker = bzmzq.worker:main',
